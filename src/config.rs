@@ -21,15 +21,15 @@ impl TryFrom<Opts> for Config {
             operation,
             config,
             pwd,
-        })
+        });
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Operation {
     Print(Option<String>),
     Add(String, String),
-    Remove(String)
+    Remove(String),
 }
 
 impl TryFrom<Vec<String>> for Operation {
@@ -52,7 +52,7 @@ impl TryFrom<Vec<String>> for Operation {
                     drain.next().expect("to exist"),
                     drain.next().expect("to exist"),
                 )
-            )
+            );
         }
 
         if term == "remove" {
@@ -61,7 +61,7 @@ impl TryFrom<Vec<String>> for Operation {
                 return Err(err);
             }
             let arg = value.pop().expect("to exist");
-            return Ok(Operation::Remove(arg))
+            return Ok(Operation::Remove(arg));
         }
 
         if value.len() > 1 {
@@ -92,4 +92,70 @@ fn get_pwd(pwd: Option<PathBuf>) -> Result<PathBuf> {
     }
 
     return Ok(std::env::current_dir().context("errored getting current_dir")?);
+}
+
+#[cfg(test)]
+mod test {
+    use anyhow::Result;
+    use crate::config::{Config, Operation};
+    use crate::opts::Opts;
+
+    #[test]
+    fn test_print_all() -> Result<()> {
+        let config: Config = Opts {
+            args: vec![],
+            pwd: None,
+            config: None,
+        }.try_into()?;
+
+        assert_eq!(config.operation, Operation::Print(None));
+        return Ok(());
+    }
+
+    #[test]
+    fn test_print_key() -> Result<()> {
+        let config: Config = Opts {
+            args: vec![
+                String::from("foo"),
+            ],
+            pwd: None,
+            config: None,
+        }.try_into()?;
+
+        assert_eq!(config.operation, Operation::Print(Some(String::from("foo"))));
+        return Ok(());
+    }
+
+    #[test]
+    fn test_add_key_value() -> Result<()> {
+        let config: Config = Opts {
+            args: vec![
+                String::from("add"),
+                String::from("foo"),
+                String::from("bar"),
+            ],
+            pwd: None,
+            config: None,
+        }.try_into()?;
+
+        assert_eq!(config.operation, Operation::Add(
+            String::from("foo"),
+            String::from("bar")
+        ));
+        return Ok(());
+    }
+    #[test]
+    fn test_remove_key() -> Result<()> {
+        let config: Config = Opts {
+            args: vec![
+                String::from("remove"),
+                String::from("foo"),
+            ],
+            pwd: None,
+            config: None,
+        }.try_into()?;
+
+        assert_eq!(config.operation, Operation::Remove(String::from("foo")));
+        return Ok(());
+    }
 }
